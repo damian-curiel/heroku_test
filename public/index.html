@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Pago</title>
+</head>
+<body>
+  <form id="payment-form">
+    <input placeholder="Card Number" type="text" id="cardNumber">
+    <input placeholder="Full Name" type="text" id="cardName">  
+    <input placeholder="MM" type="text" id="expiryMonth">
+    <input placeholder="YY" type="text" id="expiryYear">
+    <input placeholder="CVV" type="text" id="cvv">
+
+    <button id="submit">Pagar $6000</button><br><br>
+
+    <form id="capture-form">
+        <input placeholder="Ticket Number" type="text" id="ticketNumber"><br>
+        <button id="capture">Capturar preautorización</button>
+        <button id="void">Anular preautorización</button>
+      </form>
+      
+
+  </form>
+
+  <script>
+    const form = document.getElementById('payment-form');
+    const submit = document.getElementById('submit');
+
+    submit.addEventListener('click', (e) => {
+      e.preventDefault();
+
+      const cardNumber = document.getElementById('cardNumber').value;
+      const cardName = document.getElementById('cardName').value;
+      const expiryMonth = document.getElementById('expiryMonth').value;
+      const expiryYear = document.getElementById('expiryYear').value;
+      const cvv = document.getElementById('cvv').value;
+
+      fetch('https://api-uat.kushkipagos.com/card/v1/tokens', {
+        method: 'POST',
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+          'Public-Merchant-Id': 'afd5ec6a41d84a6bb26510056012890e', // Public key
+        },
+        body: JSON.stringify({
+          totalAmount: 6000,
+          currency: 'MXN',
+          card: {
+            name: cardName,
+            number: cardNumber,
+            expiryMonth: expiryMonth,
+            expiryYear: expiryYear,
+            cvv: cvv
+          }
+        }),
+      })
+      .then(response => response.json())
+      .then(data => {
+        console.log(data);
+        // Enviando tokenización al back
+        fetch('/auth', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                token: data.token,
+            }),
+        })
+        .then(response => response.json())
+        .then(data => {
+            console.log('Preauthorization response:', data);
+        })
+        .catch((error) => {
+            console.error('Error during preauthorization:', error);
+        });
+    })
+      .catch((error) => {
+        console.error('Error:', error);
+      });
+    });
+
+
+    const captureForm = document.getElementById('capture-form');
+    const captureButton = document.getElementById('capture');
+    const voidButton = document.getElementById('void');
+
+    //Manejadores de evento para botón de void y capture
+    captureButton.addEventListener('click', (e) => {
+    e.preventDefault();
+
+    const ticketNumber = document.getElementById('ticketNumber').value;
+
+    fetch('/capture', {  //Enviamos request de capura al back
+        method: 'POST',
+        headers: {
+        'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+        ticketNumber: ticketNumber,
+        }),
+    })
+    .then(response => response.json())
+    .then(data => {
+        console.log('Capture response:', data);
+    })
+    .catch((error) => {
+        console.error('Error during capture:', error);
+    });
+    });
+
+    voidButton.addEventListener('click', (e) => {
+    e.preventDefault();
+
+    const ticketNumber = document.getElementById('ticketNumber').value;
+
+    fetch('/void', {  //enviamos request de void al back
+        method: 'POST',
+        headers: {
+        'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+        ticketNumber: ticketNumber,
+        }),
+    })
+    .then(response => response.json())
+    .then(data => {
+        console.log('Void response:', data);
+    })
+    .catch((error) => {
+        console.error('Error during void:', error);
+    });
+    });
+
+
+  </script>
+</body>
+</html>
